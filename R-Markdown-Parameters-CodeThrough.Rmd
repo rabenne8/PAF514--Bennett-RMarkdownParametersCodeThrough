@@ -1,0 +1,171 @@
+---
+title: "Using Parameters in R Markdown"
+name: "Ryan Bennett"
+output:
+  html_document:
+    theme: readable
+    highlight: tango
+    toc: true
+params:
+  cylinders:
+    value: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+
+library(dplyr)
+```
+
+
+# What Are R Markdown Parameters?
+
+R Markdown parameters make it possible to use the same report with different inputs. Instead of creating a new R Markdown file every time something changes, you can set up a parameter and change the value when you render the report.
+
+For this code-through, I am using the built-in `mtcars` dataset. I will show how the same report can be used to look at vehicles with different numbers of cylinders without having to rewrite the report each time.
+
+
+# Step 1: Create a Parameter
+
+The parameter is created in the YAML section at the top of the R Markdown file. In this example, the parameter is called `cylinders` and the default value is set to 4.
+
+```yaml
+params:
+  cylinders:
+    value: 4
+```
+
+Once the parameter is created, I can use it inside an R code chunk by calling `params$cylinders`.
+
+```{r}
+params$cylinders
+```
+
+# Step 2: Load the Data
+
+For this example, I am using the built-in `mtcars` dataset. Since this dataset is already included in R, there is nothing extra that needs to be downloaded.
+
+```{r}
+d <- mtcars
+
+head(d)
+```
+
+This gives me a quick look at the data before I start filtering it. The `cyl` column shows the number of cylinders for each vehicle, which is the variable I will use with the parameter.
+
+
+# Step 3: Filter the Data Using the Parameter
+
+Now I can use the `cylinders` parameter to filter the dataset. Instead of typing a specific number directly into the filter, I use `params$cylinders`.
+
+```{r}
+
+d.filtered <-
+  d %>%
+  filter(cyl == params$cylinders)
+
+head(d.filtered)
+```
+
+This is the main advantage of using parameters. If I change the value of `cylinders` when the report is rendered, the same code will automatically filter the dataset to a different group of vehicles.
+
+
+# Step 4: Summarize the Filtered Data
+
+Once the data is filtered, I can calculate summary statistics for only the vehicles that match the parameter.
+
+```{r}
+d.filtered %>%
+  summarize(
+    average_mpg = mean(mpg),
+    average_hp = mean(hp),
+    number_of_vehicles = n()
+  )
+```
+
+This gives me the average miles per gallon, average horsepower, and the number of vehicles for the selected cylinder group. If I change the parameter, these results will also change automatically.
+
+
+# Step 5: Create a Graph Using the Filtered Data
+
+The same filtered dataset can also be used to create graphs. In this example, I am comparing vehicle weight to miles per gallon.
+
+```{r}
+plot(
+  d.filtered$wt,
+  d.filtered$mpg,
+  xlab = "Vehicle Weight",
+  ylab = "Miles Per Gallon",
+  main = paste(
+    "MPG vs. Weight -",
+    params$cylinders,
+    "Cylinder Vehicles"
+  ),
+  pch = 19
+)
+```
+
+The title also uses the parameter, so both the data and the graph label will change depending on which cylinder value is used when the report is rendered.
+
+
+# Step 6: Render the Same Report with a Different Parameter
+
+The report can be rendered with a different value by using `rmarkdown::render()`. For example, this would create the same report using only 6-cylinder vehicles.
+
+```{r, eval=FALSE}
+rmarkdown::render(
+  "R-Markdown-Parameters-Code-Through.Rmd",
+  params = list(cylinders = 6)
+)
+```
+
+I am using `eval=FALSE` in this example because I do not want the R Markdown file to try to render itself while it is already being knitted. The code is included as an example for how the parameter can be changed outside of the report.
+
+
+# Step 7: What Not to Do
+
+Without parameters, I could hard-code the cylinder value directly into the filter.
+
+```{r, eval=FALSE}
+d.filtered <-
+  d %>%
+  filter(cyl == 4)
+```
+
+This works, but it makes the report less flexible. If I wanted to create the same report for 6-cylinder or 8-cylinder vehicles, I would have to go back into the code and change the number manually.
+
+Using `params$cylinders` instead keeps the report reusable and reduces the amount of code that needs to be changed.
+
+
+# Step 8: Automate Multiple Reports
+
+Once the report is parameterized, I can also use a loop to create several versions automatically.
+
+```{r, eval=FALSE}
+for(i in c(4, 6, 8))
+{
+  rmarkdown::render(
+    "R-Markdown-Parameters-Code-Through.Rmd",
+    output_file = paste0("mtcars-", i, "-cylinders.html"),
+    params = list(cylinders = i)
+  )
+}
+```
+
+This would create three separate reports for 4-cylinder, 6-cylinder, and 8-cylinder vehicles. The report structure stays the same, while the parameter changes the data being used each time.
+
+
+# Final Takeaway
+
+R Markdown parameters are useful when the same report needs to be reused with different inputs. Instead of making several copies of the same file and changing the code each time, I can create one template and pass in a different parameter when the report is rendered.
+
+In this example, the parameter changed which vehicles were included in the analysis, and the summaries and graph updated automatically. The same idea can be used with other datasets, years, departments, or other values that change between reports.
+
+
+
+
+
